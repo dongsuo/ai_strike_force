@@ -1,163 +1,225 @@
 /**
  * 模型选择器组件
- * 用于选择参与对话的AI模型
+ * 允许用户在下拉框内搜索并选择要在对话中使用的AI模型
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Chip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button, Spinner } from '@nextui-org/react';
-import { ChevronDownIcon } from './icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Button, 
+  Chip, 
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Input,
+} from '@nextui-org/react';
+import { ChevronDownIcon, SearchIcon } from './icons';
 import { useModels } from '../hooks/useModels';
+import { Model } from '../types';
 
 interface ModelSelectorProps {
   onSelectionChange: (modelIds: string[]) => void;
-  maxModels: number;
+  maxModels?: number;
+  initialSelection?: string[];
 }
 
-export const ModelSelector: React.FC<ModelSelectorProps> = ({ onSelectionChange, maxModels }) => {
-  const { models, isLoading, error, refetch } = useModels();
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set([]));
-  const [retrying, setRetrying] = useState(false);
-  const [showLimitMessage, setShowLimitMessage] = useState(false);
-  const initialSelectionDone = useRef(false);
-
+export const ModelSelector: React.FC<ModelSelectorProps> = ({ 
+  onSelectionChange, 
+  maxModels = 4,
+  initialSelection = []
+}) => {
+  const { models, isLoading, error } = useModels();
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set(initialSelection));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // 当选择变化时通知父组件
   useEffect(() => {
-    // 仅在初始加载模型时应用默认选择，而不是每次selectedKeys为空时
-    if (models && models.length > 0 && !initialSelectionDone.current) {
-      const defaultModels = models.slice(0, Math.min(4, models.length));
-      const defaultModelIds = new Set(defaultModels.map(m => m.id));
-      setSelectedKeys(defaultModelIds);
-      onSelectionChange(Array.from(defaultModelIds));
-      initialSelectionDone.current = true;
-    }
-  }, [models, onSelectionChange]);
+    onSelectionChange(Array.from(selectedKeys));
+  }, [selectedKeys, onSelectionChange]);
 
-  // 直接处理模型选择，不再依赖DropdownMenu的内置选择管理
-  const handleModelToggle = (modelId: string) => {
-    const newSelectedKeys = new Set(selectedKeys);
-    
-    if (newSelectedKeys.has(modelId)) {
-      // 删除模型，取消选择
-      newSelectedKeys.delete(modelId);
-    } else {
-      // 如果已达到最大选择数量
-      if (newSelectedKeys.size >= maxModels) {
-        setShowLimitMessage(true);
-        setTimeout(() => setShowLimitMessage(false), 3000);
-        return; // 不允许超过最大选择数量
+  // 处理单个模型的选择
+  const handleSelectionChange = (modelId: string, isSelected: boolean) => {
+    setSelectedKeys(prev => {
+      const newSelection = new Set(prev);
+      
+      if (isSelected) {
+        // 检查是否达到最大选择数
+        if (newSelection.size >= maxModels) {
+          return prev; // 已达上限，不添加
+        }
+        newSelection.add(modelId);
+      } else {
+        newSelection.delete(modelId);
       }
-      // 添加模型，设置选择
-      newSelectedKeys.add(modelId);
-    }
-    
-    setSelectedKeys(newSelectedKeys);
-    onSelectionChange(Array.from(newSelectedKeys));
-    setShowLimitMessage(false);
+      
+      return newSelection;
+    });
   };
   
-  const handleRetry = async () => {
-    // 强制重新获取模型
-    setRetrying(true);
-    try {
-      await refetch();
-    } finally {
-      setRetrying(false);
+  // 根据搜索过滤模型
+  const filteredModels = useMemo(() => {
+    if (!models) return [];
+    if (!searchQuery.trim()) return models;
+    
+    return models.filter(model => 
+      model.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      model.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [models, searchQuery]);
+
+  const sortedFilteredModels = useMemo(() => {
+    return [...filteredModels].sort((a, b) => 
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
+  }, [filteredModels]);
+  
+  // 获取已选模型的显示文本
+  const getSelectedModelsText = () => {
+    if (!models) return "选择AI模型";
+    
+    const selectedModels = models.filter(model => selectedKeys.has(model.id));
+    
+    if (selectedModels.length === 0) {
+      return "选择AI模型";
     }
+    
+    if (selectedModels.length === 1) {
+      return selectedModels[0].name;
+    }
+    
+    return `已选择 ${selectedModels.length} 个模型`;
   };
 
-  if (isLoading || retrying) {
-    return (
-      <div className="flex items-center gap-2">
-        <Spinner size="sm" />
-        <span>加载可用模型中...</span>
-      </div>
-    );
-  }
-
   if (error) {
-    return (
-      <div className="flex flex-col gap-2 text-danger bg-danger-50 p-3 rounded-lg">
-        <div className="font-semibold">模型加载失败</div>
-        <div className="text-sm">{error.message || '无法连接到API服务，请检查网络连接'}</div>
-        <div className="text-xs mt-1">API请求路径: /models</div>
-        <Button 
-          color="primary" 
-          size="sm" 
-          onClick={handleRetry}
-          className="mt-2"
-        >
-          重新获取模型
-        </Button>
-      </div>
-    );
+    return <div className="text-danger">无法加载模型列表</div>;
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium">选择参与对话的模型 (最多 {maxModels} 个)</label>
-      {showLimitMessage && (
-        <div className="text-warning text-sm bg-warning-50 p-2 rounded-md mb-1">
-          已达到最大选择数量({maxModels}个)，请先取消选择其他模型
+    <div className="w-full">
+      <Popover 
+        isOpen={isOpen} 
+        onOpenChange={setIsOpen}
+        placement="bottom"
+        showArrow={true}
+        offset={10}
+        classNames={{
+          content: "p-0 border border-default-200 bg-gradient-to-b from-white to-default-50 shadow-xl rounded-xl"
+        }}
+      >
+        <PopoverTrigger>
+          <Button 
+            variant="flat" 
+            endContent={<ChevronDownIcon />}
+            isLoading={isLoading}
+            className="w-full justify-between bg-gradient-to-r from-default-50 to-default-100 border border-default-200 hover:bg-default-100 transition-all"
+            radius="lg"
+          >
+            {getSelectedModelsText()}
+          </Button>
+        </PopoverTrigger>
+        
+        <PopoverContent className="w-[320px] p-0 overflow-hidden">
+          {/* 搜索区域 - 简化样式并与列表对齐 */}
+          <div className="w-[300px] sticky top-0 z-10 bg-white border-b border-default-200 px-1 pt-1 pb-2">
+            <Input
+              placeholder="搜索模型..."
+              size="sm"
+              startContent={<SearchIcon size={16} className="text-default-400" />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              classNames={{
+                inputWrapper: "w-full border border-default-200 hover:border-primary-300 focus-within:border-primary-500 rounded-lg h-9",
+              }}
+              clearable
+              autoFocus
+            />
+            {selectedKeys.size >= maxModels && (
+              <div className="text-xs text-warning mt-2 mx-2 px-2 py-1 bg-warning-50 rounded-lg border border-warning-200 flex items-center">
+                <span className="i-lucide-alert-circle mr-1 text-warning" />
+                已达到最大选择数量 ({maxModels})
+              </div>
+            )}
+          </div>
+          
+          <div className="max-h-[300px] overflow-y-auto py-2 bg-white">
+            {sortedFilteredModels.length > 0 ? (
+              sortedFilteredModels.map((model) => {
+                const isSelected = selectedKeys.has(model.id);
+                const isDisabled = !isSelected && selectedKeys.size >= maxModels;
+                
+                return (
+                  <div
+                    key={model.id}
+                    className={`px-3 py-2.5 cursor-pointer transition-all flex items-center gap-2 mx-1 my-0.5 rounded-lg ${
+                      isDisabled ? 'opacity-50 cursor-not-allowed' : 
+                      isSelected ? 'bg-primary-50 border-primary-100 border' : 
+                      'hover:bg-default-100'
+                    }`}
+                    onClick={() => {
+                      if (!isDisabled) {
+                        handleSelectionChange(model.id, !isSelected);
+                      }
+                    }}
+                  >
+                    <div className="relative flex items-center justify-center w-5 h-5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          if (!isDisabled) {
+                            handleSelectionChange(model.id, e.target.checked);
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className="h-4 w-4 rounded border-2 border-default-300 text-primary-500 focus:ring-primary-400"
+                      />
+                      {isSelected && (
+                        <span className="absolute top-0 right-0 -mt-1 -mr-1 w-2 h-2 bg-primary-500 rounded-full"></span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-0 flex-1">
+                      <span className="text-sm font-medium">{model.name}</span>
+                      <span className="text-xs text-default-500">{model.description}</span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="py-4 text-center text-default-400">
+                <div className="mx-auto w-8 h-8 mb-2 rounded-full bg-default-100 flex items-center justify-center">
+                  <span className="i-lucide-search text-lg text-default-400" />
+                </div>
+                没有找到匹配的模型
+              </div>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+      
+      {/* 显示已选模型 */}
+      {selectedKeys.size > 0 && models && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {Array.from(selectedKeys).map(modelId => {
+            const model = models.find(m => m.id === modelId);
+            return model ? (
+              <Chip 
+                key={modelId}
+                onClose={() => handleSelectionChange(modelId, false)}
+                variant="flat"
+                size="sm"
+                color="primary"
+                classNames={{
+                  base: "bg-gradient-to-r from-primary-50 to-default-50 border border-primary-100",
+                  content: "font-medium",
+                }}
+                radius="lg"
+              >
+                {model.name}
+              </Chip>
+            ) : null;
+          })}
         </div>
       )}
-      <Dropdown>
-        <DropdownTrigger>
-          <Button 
-            variant="bordered" 
-            endContent={<ChevronDownIcon />}
-            className="justify-between"
-          >
-            已选择 {selectedKeys.size} 个模型
-          </Button>
-        </DropdownTrigger>
-        <DropdownMenu
-          aria-label="选择参与对话的模型"
-          className="max-h-[300px] overflow-y-auto"
-          closeOnSelect={false}
-        >
-          {(models || []).map((model) => {
-            const isSelected = selectedKeys.has(model.id);
-            return (
-              <DropdownItem 
-                key={model.id} 
-                textValue={model.name}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleModelToggle(model.id);
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>{model.name}</span>
-                  <div className="flex items-center gap-2">
-                    {model.isFree && (
-                      <Chip size="sm" color="success" variant="flat">免费</Chip>
-                    )}
-                    {isSelected && (
-                      <span className="text-primary">✓</span>
-                    )}
-                  </div>
-                </div>
-              </DropdownItem>
-            );
-          })}
-        </DropdownMenu>
-      </Dropdown>
-      <div className="flex flex-wrap gap-1 mt-2">
-        {Array.from(selectedKeys).map(key => {
-          const model = models?.find(m => m.id === key);
-          return model ? (
-            <Chip 
-              key={key} 
-              color="primary" 
-              variant="flat" 
-              className="mr-1"
-              onClose={() => handleModelToggle(key)}
-              closeable
-            >
-              {model.name}
-            </Chip>
-          ) : null;
-        })}
-      </div>
     </div>
   );
 };

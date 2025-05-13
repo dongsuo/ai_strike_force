@@ -1,135 +1,144 @@
 /**
  * 对话展示组件
- * 显示多个AI模型的对话协商过程和最终结果
+ * 使用IM风格界面显示对话内容，包括多轮协商和总结
  */
 
-import React from 'react';
-import { Card, CardBody, CardHeader, CardFooter, Divider, Progress, Chip, Button } from '@nextui-org/react';
-import { RefreshIcon } from './icons';
+import React, { useRef, useEffect } from 'react';
+import { Card, CardBody, Spinner, Avatar, Tooltip, Chip } from '@nextui-org/react';
 import { useConversation } from '../context/ConversationContext';
-import { ModelResponse } from '../types';
+import { Message } from './Message';
 
 export const ConversationDisplay: React.FC = () => {
   const { currentConversation, isLoading } = useConversation();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  
+  // 消息列表自动滚动到底部
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [currentConversation?.messages]);
 
   if (!currentConversation && !isLoading) {
     return (
-      <Card className="w-full max-w-3xl mx-auto mt-8 shadow-lg">
-        <CardBody className="text-center py-8">
-          <p className="text-lg text-default-500">
-            请输入问题并选择模型来开始一次新的对话
+      <Card className="w-full max-w-3xl mx-auto mt-8 shadow-xl rounded-xl bg-gradient-to-b from-white to-default-50 border border-default-200">
+        <CardBody className="text-center py-12">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center">
+              <span className="i-lucide-message-circle text-4xl text-primary-500"></span>
+            </div>
+          </div>
+          <p className="text-xl font-medium text-default-700 mb-2">
+            开始新的多模型协作对话
+          </p>
+          <p className="text-default-500 max-w-md mx-auto">
+            请输入问题并选择AI模型来开始一次新的对话，最多可选择4个模型进行协作解答
           </p>
         </CardBody>
       </Card>
     );
   }
 
-  if (isLoading) {
+  if (isLoading && (!currentConversation || currentConversation.messages.length === 0)) {
     return (
-      <Card className="w-full max-w-3xl mx-auto mt-8 shadow-lg">
-        <CardHeader className="pb-0 pt-4 px-6 flex flex-col items-start">
-          <h4 className="text-xl font-bold">AI 模型协商中...</h4>
-          <p className="text-small text-default-500 mt-1">
-            {currentConversation?.question || '处理您的问题中'}
-          </p>
-        </CardHeader>
-        <CardBody className="py-4">
-          <Progress
-            isIndeterminate
-            aria-label="加载中"
-            className="my-4"
+      <Card className="w-full max-w-3xl mx-auto mt-8 shadow-xl rounded-xl bg-gradient-to-b from-white to-default-50 border border-default-200">
+        <CardBody className="flex flex-col items-center justify-center py-12">
+          <Spinner 
+            label="正在准备对话..." 
             color="primary"
+            labelColor="primary"
+            classNames={{
+              wrapper: "w-16 h-16",
+              circle1: "border-4",
+              circle2: "border-4",
+              label: "text-md font-medium mt-4"
+            }}
           />
-          <p className="text-center text-default-500">
-            AI StrikeForce 正在协商最佳答案，请稍候...
-          </p>
         </CardBody>
       </Card>
     );
   }
-
-  if (!currentConversation) return null;
-
-  const { question, rounds, finalSummary, models } = currentConversation;
-  const currentRound = rounds.length;
-  const progressValue = Math.min((currentRound / 3) * 100, 100);
-  
-  const getModelNameById = (modelId: string) => {
-    const model = models.find(m => m.id === modelId);
-    return model ? model.name : modelId;
-  };
 
   return (
-    <Card className="w-full max-w-3xl mx-auto mt-8 shadow-lg">
-      <CardHeader className="pb-0 pt-4 px-6 flex flex-col items-start">
-        <h4 className="text-xl font-bold">对话协商结果</h4>
-        <p className="text-small text-default-500 mt-1">{question}</p>
-      </CardHeader>
-      <CardBody className="py-4">
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium">协商进度: 第 {currentRound} 轮 (最多3轮)</span>
-            <span className="text-sm">{finalSummary ? '已完成' : '进行中'}</span>
-          </div>
-          <Progress
-            value={progressValue}
-            color="primary"
-            aria-label="协商进度"
-            className="h-2"
-            size="sm"
-          />
+    <Card className="w-full max-w-3xl mx-auto mt-8 shadow-xl flex flex-col h-[700px] rounded-xl border border-default-200 overflow-hidden bg-gradient-to-br from-white to-default-50">
+      <CardBody className="py-4 px-4 flex flex-col flex-grow overflow-hidden">
+        {/* 对话标题和当前状态 */}
+        <div className="border-b pb-3 mb-4 flex-shrink-0 bg-gradient-to-r from-default-50 to-white -mx-4 px-4 rounded-t-xl">
+          <h4 className="text-xl font-bold text-center bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">AI 多模型协作</h4>
+          {currentConversation && (
+            <div className="flex justify-center mt-2">
+              <Chip 
+                size="sm" 
+                color={currentConversation.isComplete ? "success" : "primary"}
+                variant="flat"
+                classNames={{
+                  base: `${currentConversation.isComplete 
+                    ? 'bg-gradient-to-r from-success-50 to-success-100 border border-success-200' 
+                    : 'bg-gradient-to-r from-primary-50 to-primary-100 border border-primary-200'} 
+                    shadow-sm`
+                }}
+                radius="lg"
+              >
+                {currentConversation.isComplete 
+                  ? "已完成" 
+                  : `第 ${currentConversation.currentRound}/${currentConversation.maxRounds} 轮讨论中`}
+              </Chip>
+            </div>
+          )}
         </div>
-
-        {/* 显示每一轮的对话 */}
-        {rounds.map((round, roundIndex) => (
-          <div key={`round-${roundIndex}`} className="mb-6">
-            <div className="flex items-center mb-2">
-              <Chip color="primary" variant="flat" className="mr-2">轮次 {roundIndex + 1}</Chip>
-            </div>
-            
-            <div className="space-y-4">
-              {round.responses.map((response, responseIndex) => (
-                <Card key={`response-${roundIndex}-${responseIndex}`} variant="flat" className="shadow-sm">
-                  <CardHeader className="py-2 px-4 bg-default-100">
-                    <span className="font-medium">{getModelNameById(response.modelId)}</span>
-                  </CardHeader>
-                  <CardBody className="py-3 px-4">
-                    <p className="whitespace-pre-line">{response.content}</p>
-                  </CardBody>
-                </Card>
-              ))}
+        
+        {/* 参与者列表 */}
+        {currentConversation && currentConversation.models.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4 justify-center flex-shrink-0 bg-default-50 py-2 rounded-xl border border-default-100">
+            <span className="text-sm text-default-500 mr-2 my-auto">参与模型：</span>
+            {currentConversation.models.map((model, index) => (
+              <Tooltip key={model.id} content={model.name} placement="bottom">
+                <Avatar
+                  className={`bg-gradient-to-br from-primary-${100 + index * 100} to-secondary-${100 + index * 100} text-white shadow-sm border border-default-200`}
+                  name={model.name.charAt(0)}
+                  size="sm"
+                  radius="full"
+                />
+              </Tooltip>
+            ))}
+          </div>
+        )}
+        
+        {/* 消息列表 - 使用flex-grow和overflow-y-auto确保正确滚动 */}
+        <div 
+          ref={messagesContainerRef}
+          className="space-y-3 overflow-y-auto flex-grow flex flex-col p-2"
+          style={{ overflowY: 'auto', height: '100%' }}
+        >
+          <div className="px-3 py-1 text-center">
+            <div className="text-xs text-default-400 bg-default-50 inline-block px-3 py-1 rounded-full border border-default-100">
+              对话开始
             </div>
           </div>
-        ))}
-
-        {/* 显示最终总结 */}
-        {finalSummary && (
-          <>
-            <Divider className="my-4" />
-            <div className="mt-4">
-              <h5 className="text-lg font-bold mb-2">最终总结</h5>
-              <Card variant="flat" className="bg-primary-50 shadow-sm">
-                <CardBody className="py-4 px-4">
-                  <p className="whitespace-pre-line">{finalSummary}</p>
-                </CardBody>
-                <CardFooter className="text-small text-default-400 justify-end">
-                  由 {getModelNameById(rounds[0].responses[0].modelId)} 总结
-                </CardFooter>
-              </Card>
+          
+          {currentConversation?.messages.map(message => (
+            <Message 
+              key={message.id} 
+              message={message} 
+              models={currentConversation.models} 
+            />
+          ))}
+          
+          {/* 加载指示器 */}
+          {isLoading && (
+            <div className="flex justify-center py-4 flex-shrink-0">
+              <div className="bg-default-50 border border-default-100 px-5 py-3 rounded-xl shadow-sm flex items-center">
+                <Spinner size="sm" color="primary" />
+                <span className="ml-2 text-sm">AI思考中...</span>
+              </div>
             </div>
-          </>
-        )}
+          )}
+          
+          {/* 用于自动滚动的引用元素 */}
+          <div ref={messagesEndRef} />
+        </div>
       </CardBody>
-      <CardFooter className="justify-end">
-        <Button 
-          variant="light" 
-          startContent={<RefreshIcon />}
-          onPress={() => window.location.reload()}
-          className="mr-2"
-        >
-          新的对话
-        </Button>
-      </CardFooter>
     </Card>
   );
 };

@@ -18,7 +18,7 @@ export const useModels = () => {
         // 上报API错误（仅开发环境）
         if (process.env.NODE_ENV === 'development' && typeof aipaDevRuntime !== 'undefined') {
           aipaDevRuntime.reportApiError({
-            url: '/api/free/models',
+            url: 'https://openrouter-load-balancer.dongsuo.workers.dev/free/models',
             method: 'GET',
           }, error.message || 'Unknown error fetching models');
         }
