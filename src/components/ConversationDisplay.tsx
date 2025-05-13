@@ -12,7 +12,7 @@ export const ConversationDisplay: React.FC = () => {
   const { currentConversation, isLoading } = useConversation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // 消息列表自动滚动到底部
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -24,11 +24,6 @@ export const ConversationDisplay: React.FC = () => {
     return (
       <Card className="w-full max-w-3xl mx-auto mt-8 shadow-xl rounded-xl bg-gradient-to-b from-white to-default-50 border border-default-200">
         <CardBody className="text-center py-12">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center">
-              <span className="i-lucide-message-circle text-4xl text-primary-500"></span>
-            </div>
-          </div>
           <p className="text-xl font-medium text-default-700 mb-2">
             开始新的多模型协作对话
           </p>
@@ -44,8 +39,8 @@ export const ConversationDisplay: React.FC = () => {
     return (
       <Card className="w-full max-w-3xl mx-auto mt-8 shadow-xl rounded-xl bg-gradient-to-b from-white to-default-50 border border-default-200">
         <CardBody className="flex flex-col items-center justify-center py-12">
-          <Spinner 
-            label="正在准备对话..." 
+          <Spinner
+            label="正在准备对话..."
             color="primary"
             labelColor="primary"
             classNames={{
@@ -68,26 +63,26 @@ export const ConversationDisplay: React.FC = () => {
           <h4 className="text-xl font-bold text-center bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">AI 多模型协作</h4>
           {currentConversation && (
             <div className="flex justify-center mt-2">
-              <Chip 
-                size="sm" 
+              <Chip
+                size="sm"
                 color={currentConversation.isComplete ? "success" : "primary"}
                 variant="flat"
                 classNames={{
-                  base: `${currentConversation.isComplete 
-                    ? 'bg-gradient-to-r from-success-50 to-success-100 border border-success-200' 
+                  base: `${currentConversation.isComplete
+                    ? 'bg-gradient-to-r from-success-50 to-success-100 border border-success-200'
                     : 'bg-gradient-to-r from-primary-50 to-primary-100 border border-primary-200'} 
                     shadow-sm`
                 }}
                 radius="lg"
               >
-                {currentConversation.isComplete 
-                  ? "已完成" 
+                {currentConversation.isComplete
+                  ? "已完成"
                   : `第 ${currentConversation.currentRound}/${currentConversation.maxRounds} 轮讨论中`}
               </Chip>
             </div>
           )}
         </div>
-        
+
         {/* 参与者列表 */}
         {currentConversation && currentConversation.models.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4 justify-center flex-shrink-0 bg-default-50 py-2 rounded-xl border border-default-100">
@@ -104,9 +99,9 @@ export const ConversationDisplay: React.FC = () => {
             ))}
           </div>
         )}
-        
+
         {/* 消息列表 - 使用flex-grow和overflow-y-auto确保正确滚动 */}
-        <div 
+        <div
           ref={messagesContainerRef}
           className="space-y-3 overflow-y-auto flex-grow flex flex-col p-2"
           style={{ overflowY: 'auto', height: '100%' }}
@@ -116,15 +111,15 @@ export const ConversationDisplay: React.FC = () => {
               对话开始
             </div>
           </div>
-          
+
           {currentConversation?.messages.map(message => (
-            <Message 
-              key={message.id} 
-              message={message} 
-              models={currentConversation.models} 
+            <Message
+              key={message.id}
+              message={message}
+              models={currentConversation.models}
             />
           ))}
-          
+
           {/* 加载指示器 */}
           {isLoading && (
             <div className="flex justify-center py-4 flex-shrink-0">
@@ -134,7 +129,7 @@ export const ConversationDisplay: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           {/* 用于自动滚动的引用元素 */}
           <div ref={messagesEndRef} />
         </div>

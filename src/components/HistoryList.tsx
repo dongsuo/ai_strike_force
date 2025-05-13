@@ -54,25 +54,25 @@ export const HistoryList: React.FC = () => {
   };
 
   return (
-    <Card className="w-full shadow-md">
-      <CardHeader className="flex justify-between items-center">
-        <h3 className="text-lg font-bold">历史对话</h3>
-        <Chip color="primary" variant="flat">{history.length}条记录</Chip>
+    <Card className="w-full shadow-xl rounded-2xl border border-default-100 bg-gradient-to-br from-white to-default-50">
+      <CardHeader className="flex justify-between items-center px-6 py-4">
+        <h3 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">历史对话</h3>
+        <Chip color="primary" variant="flat" className="shadow-sm border border-primary-200 font-medium">{history.length}条记录</Chip>
       </CardHeader>
-      <Divider />
-      <CardBody className="px-2 py-0">
+      <Divider className="opacity-50" />
+      <CardBody className="px-4 py-2 max-h-[500px] overflow-y-auto">
         {history.map((item, index) => (
-          <div key={item.id} className="py-3 px-2 hover:bg-default-100 cursor-pointer rounded">
+          <div key={item.id} className="py-3 px-3 my-1 hover:bg-primary-50 hover:border-primary-100 cursor-pointer rounded-xl transition-all duration-200 border border-transparent hover:shadow-md">
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <p className="font-medium">{item.question}</p>
-                <p className="text-sm text-default-500 mt-1 line-clamp-2">{item.summary}</p>
+                <p className="font-semibold text-default-700">{item.question}</p>
+                <p className="text-sm text-default-500 mt-1.5 line-clamp-2">{item.summary}</p>
               </div>
-              <div className="text-xs text-default-400 whitespace-nowrap ml-2">
+              <div className="text-xs text-default-400 whitespace-nowrap ml-3 bg-default-100 px-2 py-1 rounded-full">
                 {formatDate(item.createdAt)}
               </div>
             </div>
-            {index < history.length - 1 && <Divider className="mt-3" />}
+            {index < history.length - 1 && <Divider className="mt-3 opacity-30" />}
           </div>
         ))}
       </CardBody>

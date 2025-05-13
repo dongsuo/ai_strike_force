@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Button, 
-  Chip, 
+import {
+  Button,
+  Chip,
   Popover,
   PopoverTrigger,
   PopoverContent,
@@ -22,8 +22,8 @@ interface ModelSelectorProps {
   initialSelection?: string[];
 }
 
-export const ModelSelector: React.FC<ModelSelectorProps> = ({ 
-  onSelectionChange, 
+export const ModelSelector: React.FC<ModelSelectorProps> = ({
+  onSelectionChange,
   maxModels = 4,
   initialSelection = []
 }) => {
@@ -31,17 +31,18 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set(initialSelection));
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // 当选择变化时通知父组件
   useEffect(() => {
     onSelectionChange(Array.from(selectedKeys));
-  }, [selectedKeys, onSelectionChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKeys]);
 
   // 处理单个模型的选择
   const handleSelectionChange = (modelId: string, isSelected: boolean) => {
     setSelectedKeys(prev => {
       const newSelection = new Set(prev);
-      
+
       if (isSelected) {
         // 检查是否达到最大选择数
         if (newSelection.size >= maxModels) {
@@ -51,42 +52,42 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
       } else {
         newSelection.delete(modelId);
       }
-      
+
       return newSelection;
     });
   };
-  
+
   // 根据搜索过滤模型
   const filteredModels = useMemo(() => {
     if (!models) return [];
     if (!searchQuery.trim()) return models;
-    
-    return models.filter(model => 
-      model.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+
+    return models.filter(model =>
+      model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       model.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [models, searchQuery]);
 
   const sortedFilteredModels = useMemo(() => {
-    return [...filteredModels].sort((a, b) => 
+    return [...filteredModels].sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
     );
   }, [filteredModels]);
-  
+
   // 获取已选模型的显示文本
   const getSelectedModelsText = () => {
     if (!models) return "选择AI模型";
-    
+
     const selectedModels = models.filter(model => selectedKeys.has(model.id));
-    
+
     if (selectedModels.length === 0) {
       return "选择AI模型";
     }
-    
+
     if (selectedModels.length === 1) {
       return selectedModels[0].name;
     }
-    
+
     return `已选择 ${selectedModels.length} 个模型`;
   };
 
@@ -96,8 +97,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   return (
     <div className="w-full">
-      <Popover 
-        isOpen={isOpen} 
+      <Popover
+        isOpen={isOpen}
         onOpenChange={setIsOpen}
         placement="bottom"
         showArrow={true}
@@ -107,18 +108,28 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         }}
       >
         <PopoverTrigger>
-          <Button 
-            variant="flat" 
-            endContent={<ChevronDownIcon />}
+          <Button
+            variant="flat"
+            endContent={<span className="text-primary-500 ml-1 group-hover:rotate-180 transition-transform duration-200"><ChevronDownIcon /></span>}
             isLoading={isLoading}
-            className="w-full justify-between bg-gradient-to-r from-default-50 to-default-100 border border-default-200 hover:bg-default-100 transition-all"
+            className="w-full justify-between bg-white border border-default-200 hover:border-primary-300 hover:bg-primary-50 transition-all duration-200 shadow-sm group py-2 font-medium text-default-700"
             radius="lg"
+            size="md"
           >
-            {getSelectedModelsText()}
+            <span className="flex items-center text-sm">
+              {selectedKeys.size > 0 ? (
+                <span className="bg-primary-50 text-primary-600 text-xs font-medium rounded-md px-1.5 py-0.5 inline-flex items-center mr-1.5 border border-primary-200">
+                  {selectedKeys.size}
+                </span>
+              ) : null}
+              <span className={selectedKeys.size > 0 ? "text-primary-600" : "text-default-500"}>
+                {getSelectedModelsText()}
+              </span>
+            </span>
           </Button>
         </PopoverTrigger>
-        
-        <PopoverContent className="w-[320px] p-0 overflow-hidden">
+
+        <PopoverContent className="w-[320px] p-0 overflow-hidden bg-white">
           {/* 搜索区域 - 简化样式并与列表对齐 */}
           <div className="w-[300px] sticky top-0 z-10 bg-white border-b border-default-200 px-1 pt-1 pb-2">
             <Input
@@ -128,7 +139,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               classNames={{
-                inputWrapper: "w-full border border-default-200 hover:border-primary-300 focus-within:border-primary-500 rounded-lg h-9",
+                inputWrapper: "w-full rounded-lg outline-none focus:outline-none focus-within:outline-none focus-within:ring-0 h-9",
+                input: "outline-none focus:outline-none focus:ring-0"
               }}
               clearable
               autoFocus
@@ -140,21 +152,20 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               </div>
             )}
           </div>
-          
+
           <div className="max-h-[300px] overflow-y-auto py-2 bg-white">
             {sortedFilteredModels.length > 0 ? (
               sortedFilteredModels.map((model) => {
                 const isSelected = selectedKeys.has(model.id);
                 const isDisabled = !isSelected && selectedKeys.size >= maxModels;
-                
+
                 return (
                   <div
                     key={model.id}
-                    className={`px-3 py-2.5 cursor-pointer transition-all flex items-center gap-2 mx-1 my-0.5 rounded-lg ${
-                      isDisabled ? 'opacity-50 cursor-not-allowed' : 
-                      isSelected ? 'bg-primary-50 border-primary-100 border' : 
-                      'hover:bg-default-100'
-                    }`}
+                    className={`px-3 py-2.5 cursor-pointer transition-all flex items-center gap-2 mx-1 my-0.5 rounded-lg ${isDisabled ? 'opacity-50 cursor-not-allowed' :
+                      isSelected ? 'bg-primary-50 border-primary-100 border' :
+                        'hover:bg-default-100'
+                      }`}
                     onClick={() => {
                       if (!isDisabled) {
                         handleSelectionChange(model.id, !isSelected);
@@ -162,20 +173,15 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                     }}
                   >
                     <div className="relative flex items-center justify-center w-5 h-5">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          if (!isDisabled) {
-                            handleSelectionChange(model.id, e.target.checked);
-                          }
-                        }}
-                        disabled={isDisabled}
-                        className="h-4 w-4 rounded border-2 border-default-300 text-primary-500 focus:ring-primary-400"
-                      />
-                      {isSelected && (
-                        <span className="absolute top-0 right-0 -mt-1 -mr-1 w-2 h-2 bg-primary-500 rounded-full"></span>
-                      )}
+                      <div
+                        className={`w-4 h-4 rounded flex items-center justify-center ${isSelected ? 'bg-primary-500 border border-primary-600' : 'border border-default-300 bg-white'}`}
+                      >
+                        {isSelected && (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col gap-0 flex-1">
                       <span className="text-sm font-medium">{model.name}</span>
@@ -195,21 +201,21 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           </div>
         </PopoverContent>
       </Popover>
-      
+
       {/* 显示已选模型 */}
       {selectedKeys.size > 0 && models && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {Array.from(selectedKeys).map(modelId => {
             const model = models.find(m => m.id === modelId);
             return model ? (
-              <Chip 
+              <Chip
                 key={modelId}
                 onClose={() => handleSelectionChange(modelId, false)}
                 variant="flat"
                 size="sm"
                 color="primary"
                 classNames={{
-                  base: "bg-gradient-to-r from-primary-50 to-default-50 border border-primary-100",
+                  base: "bg-gradient-to-r from-primary-50 to-default-50 border border-primary-100 rounded-lg",
                   content: "font-medium",
                 }}
                 radius="lg"

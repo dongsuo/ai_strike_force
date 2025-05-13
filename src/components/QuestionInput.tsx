@@ -64,9 +64,9 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({ onSubmit }) => {
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full max-w-3xl mx-auto">
-      <Card className="w-full shadow-xl rounded-xl border border-default-200 bg-gradient-to-b from-white to-default-50">
-        <CardBody className="gap-4 px-4 py-4">
+    <div className="flex flex-col gap-5 w-full max-w-3xl mx-auto">
+      <Card className="w-full shadow-2xl rounded-2xl border border-default-100 bg-gradient-to-br from-white to-default-50">
+        <CardBody className="gap-5 px-6 py-6">
           <Textarea
             label={isFollowUpMode ? "追问" : "输入您的问题"}
             placeholder={isFollowUpMode 
@@ -76,32 +76,26 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({ onSubmit }) => {
             onChange={(e) => setQuestion(e.target.value)}
             minRows={3}
             maxRows={6}
-            className="w-full"
+            className="w-full text-base"
             classNames={{
-              inputWrapper: "bg-white shadow-sm border-2 border-default-200 focus-within:border-primary-300 rounded-xl data-[hover=true]:border-primary-200",
-              input: "font-medium",
-              label: "font-medium text-default-700",
+              inputWrapper: "bg-white shadow-md border-2 border-default-200 focus-within:border-primary-400 rounded-2xl transition-all duration-200 data-[hover=true]:border-primary-200",
+              label: "font-medium text-default-600 mb-2",
+              input: "placeholder:text-default-300 text-default-700"
             }}
           />
-          {!isFollowUpMode && (
-            <div className="mt-2">
-              <ModelSelector 
-                onSelectionChange={handleModelSelectionChange} 
-                maxModels={4}
-                initialSelection={currentConversation?.modelIds || []}
-              />
-            </div>
-          )}
+          <ModelSelector 
+            onSelectionChange={handleModelSelectionChange}
+            initialSelection={selectedModelIds}
+          />
         </CardBody>
-        <CardFooter className="justify-end border-t border-default-200 bg-default-50 rounded-b-xl px-4 py-3">
-          <Button 
-            color="primary" 
-            onPress={handleSubmit}
+        <CardFooter className="flex justify-end px-6 pb-6 pt-0 bg-gradient-to-t from-default-50 to-white rounded-b-2xl">
+          <Button
             isLoading={isSubmitting || isLoading}
             isDisabled={!question.trim() || (!isFollowUpMode && selectedModelIds.length === 0)}
-            className="bg-gradient-to-r from-primary-500 to-primary-600 shadow-lg hover:shadow-xl transition-all duration-300 font-medium"
+            className="px-8 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold text-white text-base rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
             radius="lg"
             size="lg"
+            onClick={handleSubmit}
           >
             {isSubmitting || isLoading 
               ? "处理中..." 
